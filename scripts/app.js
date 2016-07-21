@@ -354,7 +354,7 @@ function NoDeviceFoundController($scope, $mdDialog, $timeout) {
                 // console.log('Re-Started scan');
                 $scope.bleexplorer._currentgateway.on('scan', $scope.bleexplorer.onScan);
                 $timeout(function() {
-                    if (($scope.bleexplorer.scanned_perips_length === undefined || $scope.bleexplorer.scanned_perips_length < 1) && $scope.bleexplorer.filterFound === false) {
+                    if (($scope.bleexplorer.filtername !== '' || $scope.bleexplorer.filteruuid !== '') && ($scope.bleexplorer.filter_scanned_perips_length === undefined || $scope.bleexplorer.filter_scanned_perips_length < 1) && $scope.bleexplorer.filterFound === false) {
                         $scope.bleexplorer.showNoDeviceFoundDialog();
                         $scope.bleexplorer.filterFound = false
                     }
