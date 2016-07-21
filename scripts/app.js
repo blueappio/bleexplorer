@@ -774,7 +774,7 @@ app.controller('filterCtrl', function($scope, $mdBottomSheet, $timeout, $mdDialo
 
         // console.log('Filtering scanned Peripherals');
         $timeout(function() {
-            if (($scope.bleexplorer.filter_scanned_perips_length === undefined || $scope.bleexplorer.filter_scanned_perips_length < 1) && $scope.bleexplorer.filterFound === false) {
+            if (($scope.bleexplorer.filtername !== '' || $scope.bleexplorer.filteruuid !== '') && ($scope.bleexplorer.filter_scanned_perips_length === undefined || $scope.bleexplorer.filter_scanned_perips_length < 1) && $scope.bleexplorer.filterFound === false) {
                 $scope.bleexplorer.showNoDeviceFoundDialog();
                 $scope.bleexplorer.filterFound = false;
                 $scope.bleexplorer.filterScan = false;
