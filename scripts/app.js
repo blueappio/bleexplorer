@@ -28,8 +28,8 @@ var app;
             $urlRouterProvider.otherwise('/devicelist');
 
             $mdThemingProvider.theme('default')
-                .primaryPalette('blue')
-                .accentPalette('pink');
+                .primaryPalette('blue-grey')
+                .accentPalette('blue');
             $mdThemingProvider.theme('success-toast');
             $mdThemingProvider.theme('error-toast');
         });
