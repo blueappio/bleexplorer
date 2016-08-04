@@ -892,15 +892,12 @@ function Util() {
     };
 
     this.isValidHex = function(sNum) {
-        var isHex = false;
-        for (var i = 0; i < sNum.length; i++) {
-            if ((typeof sNum[i] === 'string') && !isNaN(parseInt(sNum[i], 16))) {
-                isHex = true;
-            } else {
-                isHex = false;
-                return isHex;
-            }
+        var isHex = true;
+
+        if (sNum.length < 2 || sNum.length % 2 != 0 || !(/^[0-9a-fA-F]+$/.test(sNum))) {
+            isHex = false;
         }
+
         return isHex;
     };
 
