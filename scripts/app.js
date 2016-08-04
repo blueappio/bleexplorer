@@ -162,6 +162,17 @@ app.controller('descriptorlistCtrl', function($scope, $state) {
         });
     }
 
+    function writing(value){
+        if (util.isValidHex(value)) {
+            $scope.bleexplorer.currentCharacteristic.writeValue(function(char) {
+                // console.log('write success');
+                $scope.bleexplorer.onSuccess('Successfully wrote the value ');
+            }, value);
+        } else {
+            $scope.bleexplorer.showAlert('Entered value is Invalid.');
+        }
+    }
+
     $scope.changeFormat = function() {
         switch ($scope.readformat) {
             case 'ASCII':
@@ -188,31 +199,18 @@ app.controller('descriptorlistCtrl', function($scope, $state) {
             switch ($scope.writeformat) {
                 case 'ASCII':
                     writeTemp = util.a2hex($scope.inputs);
-                    $scope.bleexplorer.currentCharacteristic.writeValue(function(char) {
-                        // console.log('write success');
-                        $scope.bleexplorer.onSuccess('Successfully wrote the value ');
-                    }, writeTemp);
+                    writing(writeTemp)
                     break;
                 case 'Int':
                     writeTemp = util.dec2hex($scope.inputs);
-                    $scope.bleexplorer.currentCharacteristic.writeValue(function(char) {
-                        // console.log('write success');
-                        $scope.bleexplorer.onSuccess('Successfully wrote the value ');
-                    }, writeTemp);
+                    writing(writeTemp)
                     break;
                 case 'Binary':
                     writeTemp = $scope.inputs; //TODO
                     break;
                 default:
                     writeTemp = $scope.inputs;
-                    if (util.isValidHex(writeTemp)) {
-                        $scope.bleexplorer.currentCharacteristic.writeValue(function(char) {
-                            // console.log('write success');
-                            $scope.bleexplorer.onSuccess('Successfully wrote the value ');
-                        }, writeTemp);
-                    } else {
-                        $scope.bleexplorer.showAlert('Entered Hex is Invalid.');
-                    }
+                    writing(writeTemp)
                     break;
             }
         } else {
