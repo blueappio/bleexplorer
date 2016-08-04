@@ -106,13 +106,13 @@ function initializeGattip() {
                 });
             } else if (err.message.indexOf('Invalid Length') > 0 || err.message.indexOf('length is invalid') > 0) {
                 window.bleexplorer.showAlert('Invalid Length. Please check the entered value');
-            } else if (err.message.indexOf('Operation failed with ATT') > 0) {
-                window.bleexplorer.showAlert('Please check the entered value');
             } else if (err.message.indexOf('Timed out') > 0) {
                 window.bleexplorer.showAlert('Timed out while processing the Request');
             } else if (err.message.indexOf('Unable to find the requested device') > 0) {
                 window.bleexplorer.showAlert('Sorry, unable to find the requested device. Issue a scan first');
-            }
+            } else if (err.message.indexOf('Operation failed with ATT') > 0) {
+                window.bleexplorer.showAlert('Gateway Error: Operation failed with ATT error');
+            } 
         });
     }
     window.bleexplorer = new BLEEXPLORER();
