@@ -112,7 +112,9 @@ function initializeGattip() {
                 window.bleexplorer.showAlert('Sorry, unable to find the requested device. Issue a scan first');
             } else if (err.message.indexOf('Operation failed with ATT') > 0) {
                 window.bleexplorer.showAlert('Gateway Error: Operation failed with ATT error');
-            } 
+            } else{
+                window.bleexplorer.showAlert(err.message);
+            }
         });
     }
     window.bleexplorer = new BLEEXPLORER();
