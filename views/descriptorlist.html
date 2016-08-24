@@ -32,10 +32,10 @@
                         <md-button class="md-primary md-raised" style="background-color: #A99595;" ng-show="bleexplorer.currentCharacteristic.properties.Read.enabled" ng-click="readAgain()">
                             Read
                         </md-button>
-                        <md-button class="md-primary md-raised" style="background-color: #A99595;" ng-show="(bleexplorer.currentCharacteristic.properties.Notify.enabled  || gattip.currentCharacteristic.properties.Indicate.enabled) && !bleexplorer.currentCharacteristic.isNotifying" ng-click="notify()">
+                        <md-button class="md-primary md-raised" style="background-color: #A99595;" ng-show="(bleexplorer.currentCharacteristic.properties.Notify.enabled  || bleexplorer.currentCharacteristic.properties.Indicate.enabled) && !bleexplorer.currentCharacteristic.isNotifying" ng-click="notify()">
                             Listen
                         </md-button>
-                        <md-button class="md-primary md-raised" style="background-color: #A99595;" ng-show='(bleexplorer.currentCharacteristic.properties.Notify.enabled  || gattip.currentCharacteristic.properties.Indicate.enabled) && bleexplorer.currentCharacteristic.isNotifying' ng-click="stopNotify()">
+                        <md-button class="md-primary md-raised" style="background-color: #A99595;" ng-show='(bleexplorer.currentCharacteristic.properties.Notify.enabled  || bleexplorer.currentCharacteristic.properties.Indicate.enabled) && bleexplorer.currentCharacteristic.isNotifying' ng-click="stopNotify()">
                             Stop
                         </md-button>
                     </div>
