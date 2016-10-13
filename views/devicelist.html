@@ -1,4 +1,4 @@
-<div class="row logo-header" ng-show="isGattipApp">
+<div class="row logo-header" ng-show="isApp">
     <div class="col-lg-2 col-xs-3 col-sm-3 col-md-2 remote-view" ng-click="gotoremoteview()">
         <h3>Remote</h3>
     </div>
@@ -10,16 +10,19 @@
 <md-toolbar class="mb-10">
     <div class="md-toolbar-tools">
         <h2>
-          <span>PERIPHERALS NEARBY</span>
+            <span>PERIPHERALS NEARBY</span>
         </h2>
     </div>
     <div ng-if="isScanning">
-        <md-progress-circular md-mode="indeterminate" md-diameter="50" style="position:absolute;top: -5px;right: 1px;width: 25px;height: 25px;" class="md-accent md-hue-2" width="50" height="50"></md-progress-circular>
+        <md-progress-circular md-mode="indeterminate" md-diameter="50"
+                              style="position:absolute;top: -5px;right: 1px;width: 25px;height: 25px;"
+                              class="md-accent md-hue-2" width="50" height="50"></md-progress-circular>
     </div>
 </md-toolbar>
 <div layout="row" flex="100">
     <div layout="column" flex="50">
-        <md-button class="md-raised md-primary" style="background:grey;color:white;" ng-click="showfilterOptions()">
+        <md-button class="md-raised md-primary" style="background:grey;color:white;" aria-label="filterOptions"
+                   ng-click="showfilterOptions()">
             <div layout="row" layout-align="center center">
                 <div>{{userFilters}}</div>
                 <div class="scan-filter"><i class="mdi mdi-chevron-down"></i></div>
@@ -27,16 +30,18 @@
         </md-button>
     </div>
     <div layout="column" flex="50">
-        <md-menu md-position-mode="target-right target" md-offset="0 42" style="margin-right: 14px;">
-            <md-button class="md-raised md-primary" style="background:grey; color:white; margin-top:-2px; width: 100%;" aria-label="Open phone interactions menu" ng-click="openMenu($mdOpenMenu, $event)">
+        <md-menu md-position-mode="target-right target" md-offset="0 42" style="margin-right: 16px;">
+            <md-button class="md-raised md-primary" style="background:grey; color:white; margin-top:-2px; width: 100%;"
+                       aria-label="Open phone interactions menu" ng-click="openMenu($mdOpenMenu, $event)">
                 <div layout="row" layout-align="center center">
                     <div>{{showOption}}</div>
-                    <div class="scan-filter" ng-if="showOption != 'Stop Scan'"><i class="mdi mdi-chevron-down"></i></div>
+                    <div class="scan-filter" ng-if="showOption != 'Stop Scan'"><i class="mdi mdi-chevron-down"></i>
+                    </div>
                 </div>
             </md-button>
             <md-menu-content width="4">
                 <md-menu-item>
-                    <md-button ng-click="scanStopScan()">
+                    <md-button aria-label="scanStopScan" ng-click="scanStopScan()">
                         <i class="mdi mdi-magnify"></i> {{scanOption}}
                     </md-button>
                 </md-menu-item>
@@ -58,14 +63,15 @@
 </div>
 
 <div class="md-padding pt-0">
-    <div layout="row" layout-align="start stretch" class="list-item1 " ng-repeat="peripheral in bleexplorer.scanned_perips" ng-show="bleexplorer.filterScan == false">
+    <div layout="row" layout-align="start stretch" class="list-item1 "
+         ng-repeat="peripheral in bleexplorer.scanned_perips" ng-show="bleexplorer.filterScan == false">
         <div layout="column" flex="5" layout-align="start start">
             <div flex style="padding-left: 9px;padding-top: 13px;">
-                <img ng-src={{peripheral.image}} width='22' hight='25' />
+                <img ng-src={{peripheral.image}} width='22' hight='25'/>
             </div>
             <div layout="row" style="padding-bottom: 7px;">
-              <div flex >{{peripheral.rssi}}</div>
-              <div style="padding-left: 2px;"> dB</div>
+                <div flex>{{peripheral.rssi}}</div>
+                <div style="padding-left: 2px;"> dB</div>
             </div>
         </div>
         <div layout="row" flex="95" layout-align="space-between center" style="padding-left:17px;">
@@ -77,11 +83,8 @@
                         <div ng-if="peripheral.txpowerLevel != undefined">
                             TXLevel:{{peripheral.txpowerLevel}}&nbsp
                         </div>
-                        <div ng-if="peripheral.discoverable">
-                            Connectable:{{peripheral.discoverable}}&nbsp
-                        </div>
-                        <div ng-if="peripheral.advdata.discoverable">
-                            Connectable:{{peripheral.advdata.discoverable}}
+                        <div ng-if="peripheral.connectable">
+                            Connectable:{{peripheral.connectable}}
                         </div>
                     </div>
                 </div>
@@ -95,14 +98,15 @@
         </div>
     </div>
 
-    <div layout="row" layout-align="start stretch" class="list-item1 " ng-repeat="peripheral in bleexplorer.filter_scanned_perips" ng-show="bleexplorer.filterScan == true">
+    <div layout="row" layout-align="start stretch" class="list-item1 "
+         ng-repeat="peripheral in bleexplorer.filter_scanned_perips" ng-show="bleexplorer.filterScan == true">
         <div layout="column" flex="5" layout-align="start start">
             <div flex style="padding-left: 9px;padding-top: 13px;">
-                <img ng-src={{peripheral.image}} width='22' hight='25' />
+                <img ng-src={{peripheral.image}} width='22' hight='25'/>
             </div>
             <div layout="row" style="padding-bottom: 7px;">
-              <div flex >{{peripheral.rssi}}</div>
-              <div style="padding-left: 2px;"> dB</div>
+                <div flex>{{peripheral.rssi}}</div>
+                <div style="padding-left: 2px;"> dB</div>
             </div>
         </div>
         <div layout="row" flex="95" layout-align="space-between center" style="padding-left:17px;">
@@ -114,11 +118,8 @@
                         <div ng-if="peripheral.txpowerLevel != undefined">
                             TXLevel:{{peripheral.txpowerLevel}}&nbsp
                         </div>
-                        <div ng-if="peripheral.discoverable">
-                            Connectable:{{peripheral.discoverable}}&nbsp
-                        </div>
-                        <div ng-if="peripheral.advdata.discoverable">
-                            Connectable:{{peripheral.advdata.discoverable}}
+                        <div ng-if="peripheral.connectable">
+                            Connectable:{{peripheral.connectable}}
                         </div>
                     </div>
                 </div>

@@ -1,9 +1,16 @@
+//alert('app');
 var app;
-(function() {
+(function () {
     app = angular.module('bleExplorerApp', ['ngMaterial', "ui.router"])
-        .config(function($stateProvider, $urlRouterProvider, $mdThemingProvider) {
+        .config(function ($stateProvider, $urlRouterProvider, $mdThemingProvider) {
 
             $stateProvider
+
+                .state('load', {
+                    url: "/load",
+                    templateUrl: "views/devicelist.html",
+                    controller: "loadCtrl"
+                })
                 .state('devicelist', {
                     url: "/devicelist",
                     templateUrl: "views/devicelist.html",
@@ -25,7 +32,7 @@ var app;
                     controller: "descriptorlistCtrl"
                 });
 
-            $urlRouterProvider.otherwise('/devicelist');
+            $urlRouterProvider.otherwise('/load');
 
             $mdThemingProvider.theme('default')
                 .primaryPalette('blue')
@@ -36,28 +43,32 @@ var app;
 
 })();
 
-app.run(['$document', '$window', function($document, $window) {
+var match,
+    pl = /\+/g, // Regex for replacing addition symbol with a space
+    search = /([^&=]+)=?([^&]*)/g,
+    decode = function (s) {
+        return decodeURIComponent(s.replace(pl, " "));
+    },
+    query = window.location.search.substring(1);
+
+var urlParams = {};
+while (match = search.exec(query))
+    urlParams[decode(match[1])] = decode(match[2]);
+
+var cordovaApp = urlParams['app'];
+
+
+app.run(['$document', '$window', function ($document, $window) {
     var document = $document[0]; //unwrap the document from the jquery wrapper // RMB HACK FOR IPAD NOT FOCUSING INPUTS INSIDE IFRAME 
-    document.addEventListener('click', function(event) {
+    document.addEventListener('click', function (event) {
         var hasFocus = document.hasFocus();
         if (!hasFocus) $window.focus();
     });
-}])
+}]);
 
-var url = "ws://localhost:6001"; //default
-// var url = "ws://192.168.1.14:49763";
-// var GATTIP = require('gatt-ip').GATTIP;
-var isGattipApp = false;
-
-//called from native side
-function connectWithPort(port) {
-    isGattipApp = true;
-    url = "ws://localhost:" + port;
-    return url;
-}
+window.bleexplorer = {};
 
 function initializeGattip() {
-
     var gattip = null;
 
     function BLEEXPLORER() {
@@ -67,21 +78,21 @@ function initializeGattip() {
 
         g = navigator.bluetooth.gattip;
 
-        g.once('state', function(state) {
+        g.once('state', function (state) {
             window.bleexplorer.showAlert("Please turn on Bluetooth to scan peripherals.");
         });
 
-        g.once('ready', function(gateway) {
+        g.once('ready', function (gateway) {
             window.bleexplorer._currentgateway = gateway;
             // console.log('ready');
             window.bleexplorer.scanStarts();
-            window.bleexplorer._currentgateway.scan(function() {
+            window.bleexplorer._currentgateway.scan(function () {
                 // console.log('Started scan');
                 window.bleexplorer._currentgateway.on('scan', window.bleexplorer.onScan);
             });
         });
 
-        g.on('error', function(err) {
+        g.on('error', function (err) {
             console.log(err);
             if (window.bleexplorer.isShowingLoadingIndic && !window.bleexplorer.filterScan) {
                 window.bleexplorer.hideDialog();
@@ -100,7 +111,7 @@ function initializeGattip() {
                 window.bleexplorer.currentPeripheral = null;
                 window.bleexplorer.mainState();
                 window.bleexplorer.scanStarts();
-                window.bleexplorer._currentgateway.scan(function() {
+                window.bleexplorer._currentgateway.scan(function () {
                     // console.log('Started scan');
                     window.bleexplorer._currentgateway.on('scan', window.bleexplorer.onScan);
                 });
@@ -112,43 +123,68 @@ function initializeGattip() {
                 window.bleexplorer.showAlert('Sorry, unable to find the requested device. Issue a scan first');
             } else if (err.message.indexOf('Operation failed with ATT') > 0) {
                 window.bleexplorer.showAlert('Gateway Error: Operation failed with ATT error');
-            } else{
+            } else {
                 window.bleexplorer.showAlert(err.message);
             }
         });
     }
+
     window.bleexplorer = new BLEEXPLORER();
 }
-initializeGattip();
 
-app.controller('characteristiclistCtrl', function($scope, $state) {
-    // console.log('characteristiclistCtrl');
-    if (isGattipApp) $scope.isGattipApp = true;
+app.controller('characteristiclistCtrl', function ($scope, $state, $mdDialog) {
+    $scope.isApp = false;
+
+    var util = new Util();
+
+    if (cordovaApp == 'true') {
+        $scope.isApp = true;
+    }
     $scope.bleexplorer = bleexplorer;
 
     if ($scope.bleexplorer.isNotifying) {
-        $scope.bleexplorer.currentCharacteristic.enableNotifications(function(charac, value) {
+        $scope.bleexplorer.currentCharacteristic.enableNotifications(function (charac, value) {
             $scope.bleexplorer.isNotifying = value;
             // console.log('Disable the notification ', value);
         }, false);
     }
 
-    $scope.discoverDescriptors = function(characteristic) {
+    $scope.discoverDescriptors = function (characteristic) {
         $scope.bleexplorer.currentCharacteristic = characteristic;
         $state.go('descriptorlist');
     };
 
-    $scope.back = function() {
+    $scope.back = function () {
         history.go(-1);
     };
 
-    $scope.gotologview = function() {
-        window.location = 'gatt-ip://logview';
+    $scope.gotologview = function () {
+        // console.log('log view click');
+        return cordova.exec(function () {
+                console.log("Success");
+            },
+            function () {
+                console.log("Fail");
+            },
+            "CallNativePlugin",
+            "log",
+            ["log"]);
     };
+
+    $scope.$on('$destroy', function iVeBeenDismissed() {
+        // console.log('destroy characteristiclist ctrl');
+        $mdDialog.cancel();
+    });
 });
-app.controller('descriptorlistCtrl', function($scope, $state) {
+app.controller('descriptorlistCtrl', function ($scope, $state, $mdDialog) {
     // console.log('descriptorlistCtrl');
-    if (isGattipApp) $scope.isGattipApp = true;
+    $scope.isApp = false;
+
+    var util = new Util();
+
+    if (cordovaApp == 'true') {
+        $scope.isApp = true;
+    }
     $scope.bleexplorer = bleexplorer;
 
     $scope.readformat = "Hex";
@@ -159,16 +195,16 @@ app.controller('descriptorlistCtrl', function($scope, $state) {
     var charValue = '';
 
     if ($scope.bleexplorer.currentCharacteristic.properties.Read && $scope.bleexplorer.currentCharacteristic.properties.Read.enabled) {
-        $scope.bleexplorer.currentCharacteristic.readValue(function(char, value) {
+        $scope.bleexplorer.currentCharacteristic.readValue(function (char, value) {
             // console.log("Got value ", value);
             charValue = value;
             $scope.changeFormat();
         });
     }
 
-    function writing(value){
+    function writing(value) {
         if (util.isValidHex(value)) {
-            $scope.bleexplorer.currentCharacteristic.writeValue(function(char) {
+            $scope.bleexplorer.currentCharacteristic.writeValue(function (char) {
                 // console.log('write success');
                 $scope.bleexplorer.onSuccess('Successfully wrote the value ');
             }, value);
@@ -177,7 +213,7 @@ app.controller('descriptorlistCtrl', function($scope, $state) {
         }
     }
 
-    $scope.changeFormat = function() {
+    $scope.changeFormat = function () {
         switch ($scope.readformat) {
             case 'ASCII':
                 $scope.currentValue = util.hex2a(charValue);
@@ -197,7 +233,7 @@ app.controller('descriptorlistCtrl', function($scope, $state) {
         }
     };
 
-    $scope.writeValue = function() {
+    $scope.writeValue = function () {
         var writeTemp = '';
         if ($scope.inputs !== '' && $scope.inputs !== null && $scope.inputs !== undefined) {
             switch ($scope.writeformat) {
@@ -222,9 +258,9 @@ app.controller('descriptorlistCtrl', function($scope, $state) {
         }
     };
 
-    $scope.readAgain = function() {
+    $scope.readAgain = function () {
         if ($scope.bleexplorer.currentCharacteristic.properties.Read && $scope.bleexplorer.currentCharacteristic.properties.Read.enabled) {
-            $scope.bleexplorer.currentCharacteristic.readValue(function(char, value) {
+            $scope.bleexplorer.currentCharacteristic.readValue(function (char, value) {
                 // console.log("Got value ", value);
                 charValue = value;
                 $scope.changeFormat();
@@ -232,34 +268,48 @@ app.controller('descriptorlistCtrl', function($scope, $state) {
         }
     };
 
-    $scope.notify = function() {
+    $scope.notify = function () {
         var value = '';
-        $scope.bleexplorer.currentCharacteristic.on('valueChange', function(charac) {
+        $scope.bleexplorer.currentCharacteristic.on('valueChange', function (charac) {
             charValue = charac.value;
             $scope.changeFormat();
         }, value);
-        $scope.bleexplorer.currentCharacteristic.enableNotifications(function(charac, value) {
+        $scope.bleexplorer.currentCharacteristic.enableNotifications(function (charac, value) {
             $scope.bleexplorer.isNotifying = value;
             // console.log('Enabled the notification ', value);
             $scope.$apply();
         }, true);
     };
 
-    $scope.stopNotify = function() {
-        $scope.bleexplorer.currentCharacteristic.enableNotifications(function(charac, value) {
+    $scope.stopNotify = function () {
+        $scope.bleexplorer.currentCharacteristic.enableNotifications(function (charac, value) {
             $scope.bleexplorer.isNotifying = value;
             // console.log('Disable the notification ', value);
             $scope.$apply();
         }, false);
     };
 
-    $scope.back = function() {
+    $scope.back = function () {
         history.go(-1);
     };
 
-    $scope.gotologview = function() {
-        window.location = 'gatt-ip://logview';
+    $scope.gotologview = function () {
+        // console.log('log view click');
+        return cordova.exec(function () {
+                console.log("Success");
+            },
+            function () {
+                console.log("Fail");
+            },
+            "CallNativePlugin",
+            "log",
+            ["log"]);
     };
+
+    $scope.$on('$destroy', function iVeBeenDismissed() {
+        // console.log('destroy descriptorlistCtrl');
+        $mdDialog.cancel();
+    });
 
 });
 
@@ -271,26 +321,10 @@ function DeviceInfoController($scope, $mdDialog, peripheral) {
     function showdata(peripheral) {
         $scope.name = peripheral.name;
         $scope.uuid = peripheral.uuid;
-        if (peripheral.advdata && peripheral.advdata !== undefined) {
-            $scope.discoverable = peripheral.advdata.discoverable;
-        } else {
-            $scope.discoverable = peripheral.discoverable;
-        }
-        if (peripheral.advdata && peripheral.advdata.txPowerLevel !== undefined) {
-            $scope.txpowerLevel = peripheral.advdata.txPowerLevel;
-        } else {
-            $scope.txpowerLevel = peripheral.txPowerLevel;
-        }
-        if (peripheral.advdata && peripheral.advdata.serviceUUIDs.length > 0) {
-            $scope.serviceUUIDs = peripheral.advdata.serviceUUIDs;
-        } else {
-            $scope.serviceUUIDs = peripheral.getAllAdvertisedServiceUUIDs();
-        }
-        if (peripheral.advdata && !util.isEmpty(peripheral.advdata.manufacturerData)) {
-            $scope.manufacturerData = peripheral.advdata.manufacturerData;
-        } else {
-            $scope.manufacturerData = peripheral.getAllMfrData();
-        }
+        $scope.connectable = peripheral.connectable;
+        $scope.txpowerLevel = peripheral.txPowerLevel;
+        $scope.serviceUUIDs = peripheral.getAllAdvertisedServiceUUIDs();
+        $scope.manufacturerData = peripheral.getAllMfrData();
         if (Object.keys($scope.manufacturerData).length == 0) {
             $scope.manufacturerData = undefined;
         }
@@ -301,34 +335,7 @@ function DeviceInfoController($scope, $mdDialog, peripheral) {
     showdata($scope.peripheral);
     $scope.peripheral1 = $scope.peripheral;
 
-    $scope.changeDataFormat = function(position) {
-
-        showdata($scope.peripheral1);
-        switch (position.showformat) {
-            case '01':
-                if ($scope.peripheral1.manufacturerData) {
-                    $scope.manufacturerData = util.hex2a($scope.peripheral1.manufacturerData);
-                }
-                if ($scope.peripheral1.rawAdvertisingData) {
-                    $scope.rawAdvertisingData = util.hex2a($scope.peripheral1.rawAdvertisingData);
-                }
-                break;
-            case '02':
-                if ($scope.peripheral1.manufacturerData) {
-                    $scope.manufacturerData = util.hex2dec($scope.peripheral1.manufacturerData);
-                }
-                if ($scope.peripheral1.rawAdvertisingData) {
-                    $scope.rawAdvertisingData = util.hex2dec($scope.peripheral1.rawAdvertisingData);
-                }
-                break;
-            default:
-                $scope.manufacturerData = $scope.peripheral1.manufacturerData;
-                $scope.rawAdvertisingData = $scope.peripheral1.rawAdvertisingData;
-                break;
-        }
-    };
-
-    $scope.okClick = function() {
+    $scope.okClick = function () {
         $mdDialog.cancel();
     };
 }
@@ -345,17 +352,17 @@ function NoDeviceFoundController($scope, $mdDialog, $timeout) {
     $scope.loading_text = "No devices found with given filters. Do you want to display all near by devices ?";
     $scope.bleexplorer = bleexplorer;
 
-    $scope.okClick = function() {
+    $scope.okClick = function () {
         $mdDialog.hide();
-        $scope.bleexplorer._currentgateway.stopScan(function() {
+        $scope.bleexplorer._currentgateway.stopScan(function () {
             $scope.bleexplorer.filtername = '';
             $scope.bleexplorer.filteruuid = '';
             $scope.bleexplorer.showLoadingIndicator('', 'Scanning for Peripherals....');
             $scope.bleexplorer.stopScanEvent($scope.bleexplorer.filtername, $scope.bleexplorer.filteruuid);
-            $scope.bleexplorer._currentgateway.scan(function() {
+            $scope.bleexplorer._currentgateway.scan(function () {
                 // console.log('Re-Started scan');
                 $scope.bleexplorer._currentgateway.on('scan', $scope.bleexplorer.onScan);
-                $timeout(function() {
+                $timeout(function () {
                     if (($scope.bleexplorer.filtername !== '' || $scope.bleexplorer.filteruuid !== '') && ($scope.bleexplorer.filter_scanned_perips_length === undefined || $scope.bleexplorer.filter_scanned_perips_length < 1) && $scope.bleexplorer.filterFound === false) {
                         $scope.bleexplorer.showNoDeviceFoundDialog();
                         $scope.bleexplorer.filterFound = false
@@ -370,29 +377,48 @@ function alertDialogController($scope, $mdDialog, alertText) {
     // console.log('alertDialogController');
     $scope.alert_text = alertText;
 
-    $scope.okClick = function() {
+    $scope.okClick = function () {
         $mdDialog.hide();
     };
 }
 
-app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialog, $mdToast, $mdBottomSheet) {
+app.controller('loadCtrl', function ($scope, $state) {
+    // console.log('loadCtrl');
+    if (cordovaApp == 'true') {
+        document.addEventListener("deviceready", onLoad, false);
+        function onLoad() {
+            initializeGattip();
+            $state.go('devicelist');
+        }
+    } else {
+        initializeGattip();
+        $state.go('devicelist');
+    }
+
+});
+
+app.controller('devicelistCtrl', function ($scope, $state, $stateParams, $mdDialog, $mdToast, $mdBottomSheet, $location) {
     // console.log('devicelistCtrl');
+    $location.replace();
+    $scope.isApp = false;
 
-    if (isGattipApp) $scope.isGattipApp = true;
-
-    // initializeGattip();
-
-    $scope.bleexplorer = bleexplorer;
     var util = new Util();
+
+    if (cordovaApp == 'true') {
+        $scope.isApp = true;
+    }
+    $scope.bleexplorer = bleexplorer;
+    $scope.bleexplorer.scanned_perips = [];
+    $scope.bleexplorer.filterScan = false;
+    $scope.bleexplorer.filtername = '';
+    $scope.bleexplorer.filteruuid = '';
+
     $scope.scanOption = 'Stop Scan';
     $scope.showOption = 'Stop Scan';
 
     $scope.userFilters = "No Filters";
     $scope.isScanning = false;
-    $scope.bleexplorer.scanned_perips = [];
-    $scope.bleexplorer.filterScan = false;
-    $scope.bleexplorer.filtername = '';
-    $scope.bleexplorer.filteruuid = '';
+
 
     function startScan() {
         $scope.bleexplorer.currentPeripheral = null;
@@ -400,9 +426,9 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
         $scope.isScanning = false;
         $scope.bleexplorer.scanned_perips = [];
 
-        $scope.bleexplorer._currentgateway.stopScan(function() {
+        $scope.bleexplorer._currentgateway.stopScan(function () {
             $scope.bleexplorer.showLoadingIndicator('', 'Scanning for Peripherals....');
-            $scope.bleexplorer._currentgateway.scan(function() {
+            $scope.bleexplorer._currentgateway.scan(function () {
                 // console.log('Started scan');
                 $scope.bleexplorer._currentgateway.on('scan', $scope.bleexplorer.onScan);
             });
@@ -414,42 +440,47 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
         startScan();
     }
 
-    if ($scope.bleexplorer.currentPeripheral) {
-        $scope.bleexplorer.currentPeripheral.disconnect(function(peripheral) {
+    if ($scope.bleexplorer && $scope.bleexplorer.currentPeripheral) {
+        $scope.bleexplorer.currentPeripheral.disconnect(function (peripheral) {
             // console.log('Peripheral ', peripheral.uuid, ' disconnected');
             disConnectFunc();
         });
+    }else{
+        // Need this one for Android remote 
+        if(/Android/i.test(navigator.userAgent) && $scope.bleexplorer && $scope.bleexplorer._currentgateway){ 
+            startScan();
+        }
     }
 
-    $scope.bleexplorer.onSuccess = function(message) {
+    $scope.bleexplorer.onSuccess = function (message) {
         $mdToast.show(
             $mdToast.simple()
-            .textContent(message)
-            .position('top')
-            .theme("success-toast")
-            .hideDelay(2500)
+                .textContent(message)
+                .position('top')
+                .theme("success-toast")
+                .hideDelay(2500)
         );
     };
 
-    $scope.bleexplorer.onError = function(message) {
+    $scope.bleexplorer.onError = function (message) {
         $mdToast.show(
             $mdToast.simple()
-            .textContent(message)
-            .position('top')
-            .theme('error-toast')
-            .hideDelay(2500)
+                .textContent(message)
+                .position('top')
+                .theme('error-toast')
+                .hideDelay(2500)
         );
     };
 
-    $scope.bleexplorer.scanStarts = function(message) {
+    $scope.bleexplorer.scanStarts = function (message) {
         $scope.bleexplorer.showLoadingIndicator('', 'Scanning for Peripherals....');
     };
 
-    $scope.bleexplorer.mainState = function() {
+    $scope.bleexplorer.mainState = function () {
         $state.go('devicelist');
     };
 
-    $scope.bleexplorer.stopScanEvent = function(filtername, filteruuid) {
+    $scope.bleexplorer.stopScanEvent = function (filtername, filteruuid) {
         $scope.perip_connect = false;
         $scope.isScanning = false;
         $scope.bleexplorer.scanned_perips = [];
@@ -468,7 +499,7 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
         }
     };
 
-    $scope.openMenu = function($mdOpenMenu, ev) {
+    $scope.openMenu = function ($mdOpenMenu, ev) {
         if ($scope.showOption === 'Stop Scan') {
             $scope.scanStopScan();
         } else {
@@ -476,10 +507,10 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
         }
     };
 
-    $scope.scanStopScan = function() {
+    $scope.scanStopScan = function () {
         $scope.bleexplorer.filterScan = false;
         if ($scope.isScanning) {
-            $scope.bleexplorer._currentgateway.stopScan(function() {
+            $scope.bleexplorer._currentgateway.stopScan(function () {
                 $scope.isScanning = false;
                 $scope.scanOption = 'Scan';
                 $scope.showOption = 'Options';
@@ -495,7 +526,7 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
             $scope.bleexplorer.stopScanEvent();
 
             $scope.bleexplorer.showLoadingIndicator('', 'Scanning for Peripherals....');
-            $scope.bleexplorer._currentgateway.scan(function() {
+            $scope.bleexplorer._currentgateway.scan(function () {
                 // console.log('Started scan');
                 $scope.scanOption = 'Stop Scan';
                 $scope.showOption = 'Stop Scan';
@@ -505,21 +536,21 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
         }
     };
 
-    $scope.sortByName = function() {
+    $scope.sortByName = function () {
         $scope.showOption = 'Sort by Name';
-        $scope.bleexplorer.scanned_perips.sort(function(a, b) {
+        $scope.bleexplorer.scanned_perips.sort(function (a, b) {
             return (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0);
         });
     };
 
-    $scope.sortByRSSI = function() {
+    $scope.sortByRSSI = function () {
         $scope.showOption = 'Sort by Near';
-        $scope.bleexplorer.scanned_perips.sort(function(a, b) {
+        $scope.bleexplorer.scanned_perips.sort(function (a, b) {
             return (Math.abs(a.rssi) > Math.abs(b.rssi) ? 1 : -1);
         });
     };
 
-    $scope.bleexplorer.onScan = function(peripheral) {
+    $scope.bleexplorer.onScan = function (peripheral) {
         $scope.scanOption = 'Stop Scan';
         $scope.showOption = 'Stop Scan';
 
@@ -527,22 +558,14 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
             $scope.isScanning = true;
 
             $scope.devices_align = true;
-            setTimeout(function() {
+            setTimeout(function () {
                 $scope.devices_align = false;
             }, 3 * 1000);
         }
 
         util.updatesignalimage(peripheral);
-        if (peripheral.advdata && peripheral.advdata.txPowerLevel !== undefined) {
-            peripheral.txpowerLevel = peripheral.advdata.txPowerLevel;
-        } else {
-            peripheral.txpowerLevel = peripheral.txPowerLevel;
-        }
-        if (peripheral.advdata && peripheral.advdata.serviceUUIDs.length > 0) {
-            peripheral.serviceUUIDs = peripheral.advdata.serviceUUIDs;
-        } else {
-            peripheral.serviceUUIDs = peripheral.getAllAdvertisedServiceUUIDs();
-        }
+        peripheral.txpowerLevel = peripheral.txPowerLevel;
+        peripheral.serviceUUIDs = peripheral.getAllAdvertisedServiceUUIDs();
 
         //Getting the user entered filters
         var filtername = $scope.bleexplorer.filtername;
@@ -616,7 +639,7 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
         }
 
         if ($scope.devices_align) {
-            $scope.bleexplorer.scanned_perips.sort(function(a, b) {
+            $scope.bleexplorer.scanned_perips.sort(function (a, b) {
                 return (Math.abs(a.rssi) > Math.abs(b.rssi) ? 1 : -1);
             });
         }
@@ -629,7 +652,7 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
         $scope.$apply();
     };
 
-    $scope.showAdvInfoDialog = function(ev, peripheral) {
+    $scope.showAdvInfoDialog = function (ev, peripheral) {
         $mdDialog.show({
             controller: DeviceInfoController,
             templateUrl: 'views/device_info.html',
@@ -642,7 +665,7 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
         });
     };
 
-    $scope.bleexplorer.showLoadingIndicator = function(ev, text) {
+    $scope.bleexplorer.showLoadingIndicator = function (ev, text) {
         $mdDialog.show({
             controller: LoadingIndicatorController,
             templateUrl: 'views/loading.html',
@@ -655,7 +678,7 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
         });
     };
 
-    $scope.bleexplorer.showAlert = function(text, ev) {
+    $scope.bleexplorer.showAlert = function (text, ev) {
         $mdDialog.show({
             controller: alertDialogController,
             templateUrl: 'views/alert.html',
@@ -668,25 +691,28 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
         });
     };
 
-    $scope.bleexplorer.hideDialog = function() {
+    $scope.bleexplorer.hideDialog = function () {
         $scope.bleexplorer.isShowingLoadingIndic = false;
         $mdDialog.cancel();
     };
 
-    $scope.showfilterOptions = function() {
+    $scope.showfilterOptions = function (ev) {
         $scope.alert = '';
-        $mdBottomSheet.show({
+        $mdDialog.show({
+            controller: filterCtrl,
             templateUrl: 'views/filter.html',
-            controller: 'filterCtrl'
+            parent: angular.element(document.body),
+            targetEvent: ev,
+            clickOutsideToClose: true,
         });
     };
 
-    $scope.connectPeripheral = function(peripheral) {
-        peripheral.once('connected', function(peripheral) {
+    $scope.connectPeripheral = function (peripheral) {
+        peripheral.once('connected', function (peripheral) {
             // console.log('Peripheral ', peripheral.uuid, ' connected');
         });
 
-        peripheral.once('disconnected', function(peripheral) {
+        peripheral.once('disconnected', function (peripheral) {
             // console.log('Peripheral ', peripheral.uuid, ' disconnected');
             if ($scope.bleexplorer.currentPeripheral) {
                 disConnectFunc();
@@ -694,24 +720,22 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
             }
         });
 
-        var discoverable = false;
-        if (peripheral.advdata && peripheral.advdata !== undefined) {
-            discoverable = peripheral.advdata.discoverable;
-        } else if (peripheral.discoverable && peripheral.discoverable !== undefined) {
-            discoverable = peripheral.discoverable;
+        var connectable = false; 
+        if (peripheral.connectable) {
+            connectable = peripheral.connectable;
         } else {
-            discoverable = true;
+            connectable = true;
         }
 
-        if (discoverable !== false) {
-            $scope.bleexplorer._currentgateway.stopScan(function() {
+        if (connectable !== false) {
+            $scope.bleexplorer._currentgateway.stopScan(function () {
                 $scope.isScanning = false;
                 $scope.scanOption = 'Scan';
                 $scope.showOption = 'Options';
 
                 $scope.bleexplorer.showLoadingIndicator('', 'Connecting to Peripheral....');
 
-                peripheral.connect(function() {
+                peripheral.connect(function () {
                     $scope.bleexplorer.currentPeripheral = peripheral;
                     $scope.perip_connect = true;
                     // console.log('Found', Object.keys(peripheral.getAllServices()).length, 'services');
@@ -727,20 +751,42 @@ app.controller('devicelistCtrl', function($scope, $state, $stateParams, $mdDialo
         }
     };
 
-    $scope.gotoremoteview = function() {
+    $scope.gotoremoteview = function () {
         // console.log('remote view click');
-        window.location = 'gatt-ip://remoteview';
+        return cordova.exec(function () {
+                console.log("Success");
+            },
+            function () {
+                console.log("Fail");
+            },
+            "CallNativePlugin",
+            "remote",
+            ["remote"]);
     };
 
-    $scope.gotologview = function() {
+    $scope.gotologview = function () {
         // console.log('log view click');
-        window.location = 'gatt-ip://logview';
+        return cordova.exec(function () {
+                console.log("Success");
+            },
+            function () {
+                console.log("Fail");
+            },
+            "CallNativePlugin",
+            "log",
+            ["log"]);
     };
+    if($scope.bleexplorer){
+        $scope.bleexplorer.stopScanEvent();
+    }
 
-    $scope.bleexplorer.stopScanEvent();
+    $scope.$on('$destroy', function iVeBeenDismissed() {
+        // console.log('destroy devicelistCtrl');
+        $mdDialog.cancel();
+    });
 
 });
-app.controller('filterCtrl', function($scope, $mdBottomSheet, $timeout, $mdDialog) {
+function filterCtrl($scope, $mdBottomSheet, $timeout, $mdDialog) {
     $scope.bleexplorer = bleexplorer;
     $scope.filter_name = $scope.bleexplorer.filtername;
     $scope.filter_serv_uuid = $scope.bleexplorer.filteruuid;
@@ -748,15 +794,15 @@ app.controller('filterCtrl', function($scope, $mdBottomSheet, $timeout, $mdDialo
 
     var util = new Util();
 
-    $scope.clearFilterName = function() {
+    $scope.clearFilterName = function () {
         $scope.filter_name = '';
     };
 
-    $scope.clearFilterUUID = function() {
+    $scope.clearFilterUUID = function () {
         $scope.filter_serv_uuid = '';
     };
 
-    $scope.bleexplorer.showNoDeviceFoundDialog = function(ev, peripheral) {
+    $scope.bleexplorer.showNoDeviceFoundDialog = function (ev, peripheral) {
         $mdDialog.show({
             controller: NoDeviceFoundController,
             templateUrl: 'views/no_device_found.html',
@@ -766,7 +812,7 @@ app.controller('filterCtrl', function($scope, $mdBottomSheet, $timeout, $mdDialo
         });
     };
 
-    $scope.scanPeripsWithFilters = function() {
+    $scope.scanPeripsWithFilters = function () {
         $scope.bleexplorer.filtername = $scope.filter_name;
         $scope.bleexplorer.filteruuid = $scope.filter_serv_uuid;
         $scope.bleexplorer.filterScan = true;
@@ -775,7 +821,7 @@ app.controller('filterCtrl', function($scope, $mdBottomSheet, $timeout, $mdDialo
         $scope.bleexplorer.showLoadingIndicator('', 'Filtering scanned Peripherals....');
 
         // console.log('Filtering scanned Peripherals');
-        $timeout(function() {
+        $timeout(function () {
             if (($scope.bleexplorer.filtername !== '' || $scope.bleexplorer.filteruuid !== '') && ($scope.bleexplorer.filter_scanned_perips_length === undefined || $scope.bleexplorer.filter_scanned_perips_length < 1) && $scope.bleexplorer.filterFound === false) {
                 $scope.bleexplorer.showNoDeviceFoundDialog();
                 $scope.bleexplorer.filterFound = false;
@@ -786,15 +832,21 @@ app.controller('filterCtrl', function($scope, $mdBottomSheet, $timeout, $mdDialo
         $mdBottomSheet.hide();
     };
 
-});
+}
 
-app.controller('servicelistCtrl', function($scope, $state, $timeout) {
+app.controller('servicelistCtrl', function ($scope, $state, $timeout, $mdDialog) {
     // console.log('servicelistCtrl');
-    if (isGattipApp) $scope.isGattipApp = true;
+    $scope.isApp = false;
+
+    var util = new Util();
+
+    if (cordovaApp == 'true') {
+        $scope.isApp = true;
+    }
     $scope.bleexplorer = bleexplorer;
     var util = new Util();
 
-    $scope.discoverCharacteristics = function(service) {
+    $scope.discoverCharacteristics = function (service) {
         $scope.bleexplorer.currentService = service;
         $scope.bleexplorer.currentService.characteristics = service.getAllCharacteristics();
 
@@ -817,13 +869,13 @@ app.controller('servicelistCtrl', function($scope, $state, $timeout) {
 
         if (characs.length > 0) {
             (function myLoop(i) {
-                setTimeout(function() {
+                setTimeout(function () {
                     var descriptors = characs[i].getAllDescriptors();
                     for (var dUUID in descriptors) {
                         if (dUUID.indexOf('2901') > -1) {
                             // console.log("i value ", i, "  ", characs[i].uuid);
                             // if (descriptors[dUUID].properties && descriptors[dUUID].properties.Read && descriptors[dUUID].properties.Read.enabled) {
-                            descriptors[dUUID].readValue(function(desc, value) {
+                            descriptors[dUUID].readValue(function (desc, value) {
                                 // console.log("Got value ", value);
                                 setCharName(desc, value);
                             });
@@ -841,18 +893,32 @@ app.controller('servicelistCtrl', function($scope, $state, $timeout) {
         $state.go('characteristiclist');
     };
 
-    $scope.back = function() {
+    $scope.back = function () {
         history.go(-1);
     };
 
-    $scope.gotologview = function() {
-        window.location = 'gatt-ip://logview';
+    $scope.gotologview = function () {
+        // console.log('log view click');
+        return cordova.exec(function () {
+                console.log("Success");
+            },
+            function () {
+                console.log("Fail");
+            },
+            "CallNativePlugin",
+            "log",
+            ["log"]);
     };
+
+    $scope.$on('$destroy', function iVeBeenDismissed() {
+        // console.log('destroy servicelistCtrl');
+        $mdDialog.cancel();
+    });
 });
 
 function Util() {
 
-    this.updatesignalimage = function(peripheral) {
+    this.updatesignalimage = function (peripheral) {
         if (!(peripheral && peripheral.rssi)) {
             return peripheral;
         }
@@ -871,7 +937,7 @@ function Util() {
         return peripheral;
     };
 
-    this.pushUniqueObj = function(array, item) {
+    this.pushUniqueObj = function (array, item) {
         var found = false,
             idx = -1;
         if (typeof array !== 'undefined') {
@@ -893,7 +959,7 @@ function Util() {
         }
     };
 
-    this.isValidHex = function(sNum) {
+    this.isValidHex = function (sNum) {
         var isHex = true;
 
         if (sNum.length < 2 || sNum.length % 2 != 0 || !(/^[0-9a-fA-F]+$/.test(sNum))) {
@@ -903,7 +969,7 @@ function Util() {
         return isHex;
     };
 
-    this.isEmpty = function(obj) {
+    this.isEmpty = function (obj) {
         for (var prop in obj) {
             if (obj.hasOwnProperty(prop))
                 return false;
@@ -911,7 +977,7 @@ function Util() {
         return JSON.stringify(obj) === JSON.stringify({});
     };
 
-    this.hex2a = function(hexx) {
+    this.hex2a = function (hexx) {
         if (hexx) {
             var hex = hexx.toString();
             var str = '';
@@ -922,16 +988,16 @@ function Util() {
         }
     };
 
-    this.hex2dec = function(hexx) {
+    this.hex2dec = function (hexx) {
         return parseInt(hexx, 16);
     };
 
-    this.hex2b = function(hexx) {
+    this.hex2b = function (hexx) {
         var num = hex2i(hexx);
         return num.toString(2);
     };
 
-    this.a2hex = function(asci) {
+    this.a2hex = function (asci) {
         var str = '';
         for (var a = 0; a < asci.length; a++) {
             str = str + asci.charCodeAt(a).toString(16);
@@ -939,7 +1005,7 @@ function Util() {
         return str;
     };
 
-    this.dec2hex = function(d) {
+    this.dec2hex = function (d) {
         var hex = Number(d).toString(16);
         while (hex.length < 2) {
             hex = '0' + hex;
