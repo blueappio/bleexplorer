@@ -94,37 +94,39 @@ function initializeGattip() {
 
         g.on('error', function (err) {
             console.log(err);
-            if (window.bleexplorer.isShowingLoadingIndic && !window.bleexplorer.filterScan) {
+            if (window.bleexplorer.isShowingLoadingIndic && !window.bleexplorer.filterScan && window.bleexplorer.isAlertShowing == false) {
                 window.bleexplorer.hideDialog();
             }
 
-            if (err.message.indexOf('"method":"ad"') > 0) {
-                window.bleexplorer.showAlert('Unable to connect with device! Try again.');
-            } else if (err.message.indexOf('Device could not be connected') > 0 || err.message.indexOf('Timed out while waiting for discovery to complete') > 0) {
-                window.bleexplorer.showAlert('Device could not be connected! Try again');
-            } else if (err.message.indexOf('Device is disconnected while discovering services') > 0) {
-                window.bleexplorer.showAlert('Device is disconnected while discovering services..');
-            } else if (err.message.indexOf('Failed to get services') > 0) {
-                window.bleexplorer.showAlert('Failed to get services. Try again');
-            } else if (err.message.indexOf('Unexpectedly disconnected') > 0) {
-                window.bleexplorer.showAlert('Device is disconnected! Try again');
-                window.bleexplorer.currentPeripheral = null;
-                window.bleexplorer.mainState();
-                window.bleexplorer.scanStarts();
-                window.bleexplorer._currentgateway.scan(function () {
-                    // console.log('Started scan');
-                    window.bleexplorer._currentgateway.on('scan', window.bleexplorer.onScan);
-                });
-            } else if (err.message.indexOf('Invalid Length') > 0 || err.message.indexOf('length is invalid') > 0) {
-                window.bleexplorer.showAlert('Invalid Length. Please check the entered value');
-            } else if (err.message.indexOf('Timed out') > 0) {
-                window.bleexplorer.showAlert('Timed out while processing the Request');
-            } else if (err.message.indexOf('Unable to find the requested device') > 0) {
-                window.bleexplorer.showAlert('Sorry, unable to find the requested device. Issue a scan first');
-            } else if (err.message.indexOf('Operation failed with ATT') > 0) {
-                window.bleexplorer.showAlert('Gateway Error: Operation failed with ATT error');
-            } else {
-                window.bleexplorer.showAlert(err.message);
+            if(window.bleexplorer.isAlertShowing == false){
+                if (err.message.indexOf('"method":"ad"') > 0) {
+                    window.bleexplorer.showAlert('Unable to connect with device! Try again.');
+                } else if (err.message.indexOf('Device could not be connected') > 0 || err.message.indexOf('Timed out while waiting for discovery to complete') > 0) {
+                    window.bleexplorer.showAlert('Device could not be connected! Try again');
+                } else if (err.message.indexOf('Device is disconnected while discovering services') > 0) {
+                    window.bleexplorer.showAlert('Device is disconnected while discovering services..');
+                } else if (err.message.indexOf('Failed to get services') > 0) {
+                    window.bleexplorer.showAlert('Failed to get services. Try again');
+                } else if (err.message.indexOf('Unexpectedly disconnected') > 0) {
+                    window.bleexplorer.showAlert('Device is disconnected! Try again');
+                    window.bleexplorer.currentPeripheral = null;
+                    window.bleexplorer.mainState();
+                    window.bleexplorer.scanStarts();
+                    window.bleexplorer._currentgateway.scan(function () {
+                        // console.log('Started scan');
+                        window.bleexplorer._currentgateway.on('scan', window.bleexplorer.onScan);
+                    });
+                } else if (err.message.indexOf('Invalid Length') > 0 || err.message.indexOf('length is invalid') > 0) {
+                    window.bleexplorer.showAlert('Invalid Length. Please check the entered value');
+                } else if (err.message.indexOf('Timed out') > 0) {
+                    window.bleexplorer.showAlert('Timed out while processing the Request');
+                } else if (err.message.indexOf('Unable to find the requested device') > 0) {
+                    window.bleexplorer.showAlert('Sorry, unable to find the requested device. Issue a scan first');
+                } else if (err.message.indexOf('Operation failed with ATT') > 0) {
+                    window.bleexplorer.showAlert('Gateway Error: Operation failed with ATT error');
+                } else {
+                    window.bleexplorer.showAlert(err.message);
+                }
             }
         });
     }
@@ -209,7 +211,7 @@ app.controller('descriptorlistCtrl', function ($scope, $state, $mdDialog) {
                 $scope.bleexplorer.onSuccess('Successfully wrote the value ');
             }, value);
         } else {
-            $scope.bleexplorer.showAlert('Entered value is Invalid.');
+            if($scope.bleexplorer.isAlertShowing == false) $scope.bleexplorer.showAlert('Entered value is Invalid.');
         }
     }
 
@@ -254,7 +256,7 @@ app.controller('descriptorlistCtrl', function ($scope, $state, $mdDialog) {
                     break;
             }
         } else {
-            $scope.bleexplorer.showAlert('Enter the value to write.');
+            if($scope.bleexplorer.isAlertShowing == false) $scope.bleexplorer.showAlert('Enter the value to write.');
         }
     };
 
@@ -342,8 +344,6 @@ function DeviceInfoController($scope, $mdDialog, peripheral) {
 
 function LoadingIndicatorController($scope, loadingText) {
     // console.log('LoadingIndicController');
-    $scope.bleexplorer = bleexplorer;
-    $scope.bleexplorer.isShowingLoadingIndic = true;
     $scope.loading_text = loadingText;
 }
 
@@ -375,10 +375,12 @@ function NoDeviceFoundController($scope, $mdDialog, $timeout) {
 
 function alertDialogController($scope, $mdDialog, alertText) {
     // console.log('alertDialogController');
+    $scope.bleexplorer = bleexplorer;
     $scope.alert_text = alertText;
 
     $scope.okClick = function () {
         $mdDialog.hide();
+        $scope.bleexplorer.isAlertShowing = false;
     };
 }
 
@@ -409,6 +411,7 @@ app.controller('devicelistCtrl', function ($scope, $state, $stateParams, $mdDial
     }
     $scope.bleexplorer = bleexplorer;
     $scope.bleexplorer.scanned_perips = [];
+    $scope.bleexplorer.isAlertShowing = false;
     $scope.bleexplorer.filterScan = false;
     $scope.bleexplorer.filtername = '';
     $scope.bleexplorer.filteruuid = '';
@@ -666,6 +669,7 @@ app.controller('devicelistCtrl', function ($scope, $state, $stateParams, $mdDial
     };
 
     $scope.bleexplorer.showLoadingIndicator = function (ev, text) {
+        $scope.bleexplorer.isShowingLoadingIndic = true;
         $mdDialog.show({
             controller: LoadingIndicatorController,
             templateUrl: 'views/loading.html',
@@ -679,6 +683,7 @@ app.controller('devicelistCtrl', function ($scope, $state, $stateParams, $mdDial
     };
 
     $scope.bleexplorer.showAlert = function (text, ev) {
+        $scope.bleexplorer.isAlertShowing = true;
         $mdDialog.show({
             controller: alertDialogController,
             templateUrl: 'views/alert.html',
@@ -736,18 +741,18 @@ app.controller('devicelistCtrl', function ($scope, $state, $stateParams, $mdDial
                 $scope.bleexplorer.showLoadingIndicator('', 'Connecting to Peripheral....');
 
                 peripheral.connect(function () {
+                    if ($scope.bleexplorer.isShowingLoadingIndic && $scope.bleexplorer.isAlertShowing == false) {
+                        $scope.bleexplorer.hideDialog();
+                    }
                     $scope.bleexplorer.currentPeripheral = peripheral;
                     $scope.perip_connect = true;
                     // console.log('Found', Object.keys(peripheral.getAllServices()).length, 'services');
                     $scope.bleexplorer.currentPeripheral.services = peripheral.getAllServices();
                     $state.go('servicelist');
-                    if ($scope.bleexplorer.isShowingLoadingIndic) {
-                        $scope.bleexplorer.hideDialog();
-                    }
                 });
             });
         } else {
-            $scope.bleexplorer.showAlert('Selected device is not connectable');
+            if($scope.bleexplorer.isAlertShowing == false) $scope.bleexplorer.showAlert('Selected device is not connectable');
         }
     };
 
