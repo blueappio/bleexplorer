@@ -386,6 +386,10 @@ function alertDialogController($scope, $mdDialog, alertText) {
 
 app.controller('loadCtrl', function ($scope, $state) {
     // console.log('loadCtrl');
+
+    // Disabling the mouse right click event
+    document.addEventListener('contextmenu', event => event.preventDefault());
+
     if (cordovaApp == 'true') {
         document.addEventListener("deviceready", onLoad, false);
         function onLoad() {
