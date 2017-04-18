@@ -388,7 +388,7 @@ app.controller('loadCtrl', function ($scope, $state) {
     // console.log('loadCtrl');
 
     // Disabling the mouse right click event
-    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.addEventListener('contextmenu', function(event) { event.preventDefault();});
 
     if (cordovaApp == 'true') {
         document.addEventListener("deviceready", onLoad, false);
