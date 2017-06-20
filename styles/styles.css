@@ -8,6 +8,15 @@ user-select: none; /* Non-prefixed version, currently
                                 supported by Chrome and Opera */
 }
 
+input {
+   -webkit-touch-callout: auto !important;
+   -webkit-user-select: auto !important;
+   -khtml-user-select: auto !important;
+   -moz-user-select: auto !important;
+   -ms-user-select: auto !important;
+   user-select: auto !important;
+}
+
 *,
 body {
     padding: 0
